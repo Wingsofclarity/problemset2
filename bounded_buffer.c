@@ -15,8 +15,8 @@
 
 #define BUFFER_SIZE 5
 
-#define PRODUCERS 2
-#define CONSUMERS 4
+#define PRODUCERS 5
+#define CONSUMERS 1
 
 #define ITERATIONS 20
 #define PRODUCER_ITERATIONS (ITERATIONS / PRODUCERS)
@@ -29,6 +29,10 @@ typedef struct {
 
 
 buffer_t buffer;
+
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+sem_t semFullSlotCount;
+sem_t semEmptySlotCount;
 
 pthread_t consumer_tid[CONSUMERS], producer_tid[PRODUCERS];
 
@@ -43,12 +47,16 @@ insert_item(int item, long int id)
     /* TODO: Check and wait if the buffer is full. Ensure exclusive
      * access to the buffer and use the existing code to remove an item.
      */
+    sem_wait(&semEmptySlotCount);
+    sem_post(&semFullSlotCount);
 
+    pthread_mutex_lock(&mutex);
 
     buffer.value[buffer.next_in] = item;
     buffer.next_in = (buffer.next_in + 1) % BUFFER_SIZE;
     printf("producer %ld: inserted %d\n", id, item);
 
+    pthread_mutex_unlock(&mutex);
 
     return 0;
 }
@@ -64,12 +72,17 @@ remove_item(int *item, long int id)
     /* TODO: Check and wait if the buffer is empty. Ensure exclusive
      * access to the buffer and use the existing code to remove an item.
      */
+    sem_wait(&semFullSlotCount);
+    sem_post(&semEmptySlotCount);
 
+    pthread_mutex_lock(&mutex);
 
     *item = buffer.value[buffer.next_out];
     buffer.value[buffer.next_out] = -1;
     buffer.next_out = (buffer.next_out + 1) % BUFFER_SIZE;
     printf("consumer %ld: removed %d\n", id, *item);
+
+    pthread_mutex_unlock(&mutex);
 
     return 0;
 }
@@ -90,11 +103,11 @@ producer(void *param)
     printf("producer started\n");
     i = PRODUCER_ITERATIONS;
     while (i--) {
-	sleep(rand() % 3);
+    	sleep(rand() % 3);
 
-	item = rand() % 10000;
-	if (insert_item(item, id))
-	    fprintf(stderr, "Error while inserting to buffer\n");
+    	item = rand() % 10000;
+    	if (insert_item(item, id))
+    	    fprintf(stderr, "Error while inserting to buffer\n");
     }
 
     pthread_exit(0);
@@ -116,10 +129,10 @@ consumer(void *param)
     printf("consumer started\n");
     i = CONSUMER_ITERATIONS;
     while (i--) {
-	sleep(rand() % 3);
+    	sleep(rand() % 3);
 
-	if (remove_item(&item, id))
-	    fprintf(stderr, "Error while removing from buffer\n");
+    	if (remove_item(&item, id))
+    	    fprintf(stderr, "Error while removing from buffer\n");
     }
 
     pthread_exit(0);
@@ -131,6 +144,8 @@ main()
     long int i;
 
     srand(time(NULL));
+    sem_init(&semFullSlotCount, 0, 0);
+    sem_init(&semEmptySlotCount, 0, BUFFER_SIZE);
 
     /* Create the consumer threads */
     for (i = 0; i < CONSUMERS; i++)

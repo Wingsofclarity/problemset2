@@ -42,7 +42,7 @@ clean:
 	$(RM) *.o *.d *~ $(EXEFILES)
 
 distclean: clean
-	$(RM) synchro rendezvous bounded_buffer
+	$(RM) synchro rendezvous bounded_buffer *.exe
 
 .PHONY: all clean
 

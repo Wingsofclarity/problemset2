@@ -1,1 +1,7 @@
+*.o
+*.d
+*.exe
+
 synchro
+bounded_buffer
+renderzvous

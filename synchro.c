@@ -39,9 +39,13 @@ inc_mutex(void *arg __attribute__((unused)))
     int i;
 
     /* TODO 1: Protect access to the shared variable */
+    pthread_mutex_lock(&mutex);
+
     for (i = 0; i < INC_ITERATIONS; i++) {
         counter += INCREMENT;
     }
+
+    pthread_mutex_unlock(&mutex);
 
     return NULL;
 }
@@ -52,9 +56,13 @@ dec_mutex(void *arg __attribute__((unused)))
     int i;
 
     /* TODO 1: Protect access to the shared variable */
+    pthread_mutex_lock(&mutex);
+
     for (i = 0; i < DEC_ITERATIONS; i++) {
         counter -= DECREMENT;
     }
+
+    pthread_mutex_unlock(&mutex);
 
     return NULL;
 }
@@ -70,7 +78,12 @@ inc_cas(void *arg __attribute__((unused)))
     /* TODO 2: Use the compare and swap primitive to manipulate the shared
      * variable */
     for (i = 0; i < INC_ITERATIONS; i++) {
-        counter += INCREMENT; // You need to replace this
+        // counter += INCREMENT; // You need to replace this
+        int done = 0;
+        while(!done) {
+            int value = counter;
+            done = __sync_bool_compare_and_swap(&counter, value, value + INCREMENT);
+        }
     }
 
     return NULL;
@@ -84,7 +97,12 @@ dec_cas(void *arg __attribute__((unused)))
     /* TODO 2: Use the compare and swap primitive to manipulate the shared
      * variable */
     for (i = 0; i < DEC_ITERATIONS; i++) {
-        counter += DECREMENT; // You need to replace this
+        // counter -= DECREMENT; // You need to replace this
+        int done = 0;
+        while(!done) {
+            int value = counter;
+            done = __sync_bool_compare_and_swap(&counter, value, value - DECREMENT);
+        }
     }
 
     return NULL;
@@ -100,7 +118,8 @@ inc_atomic(void *arg __attribute__((unused)))
 
     /* TODO 3: Use atomic primitives to manipulate the shared variable */
     for (i = 0; i < INC_ITERATIONS; i++) {
-        counter += DECREMENT; // You need to replace this
+        // counter += INCREMENT; // You need to replace this
+        __sync_fetch_and_add(&counter, INCREMENT);
     }
 
     return NULL;
@@ -113,7 +132,8 @@ dec_atomic(void *arg __attribute__((unused)))
 
     /* TODO 3: Use atomic primitives to manipulate the shared variable */
     for (i = 0; i < DEC_ITERATIONS; i++) {
-        counter += DECREMENT; // You need to replace this
+        // counter -= DECREMENT; // You need to replace this
+        __sync_fetch_and_sub(&counter, DECREMENT);
     }
 
     return NULL;
